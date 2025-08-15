@@ -108,7 +108,11 @@ def alert():
 
 @app.route("/")
 def serve_index():
-    return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(app.static_folder, "sheild_frontend2.html")
+
+@app.route("/sheild_frontend2.html")
+def serve_shield_frontend2():
+    return send_from_directory(app.static_folder, "sheild_frontend2.html")
 
 @app.route("/<path:path>")
 def serve_static_file(path):
@@ -116,7 +120,8 @@ def serve_static_file(path):
     if os.path.isfile(file_path):
         return send_from_directory(app.static_folder, path)
     else:
-        return send_from_directory(app.static_folder, "index.html")
+        return send_from_directory(app.static_folder, "sheild_frontend2.html")
+
 
 # ------------------- Socket.IO Events (Encrypted) -------------------
 
