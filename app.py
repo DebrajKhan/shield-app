@@ -296,15 +296,8 @@ def handle_heartbeat(data):
 
 # ------------------- Run App -------------------
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    print(f"🚀 SHEild Safety Server starting on port {port}")
-    print("📱 Frontend: http://localhost:8000")
-    print("👮 Police Dashboard: http://localhost:8000/police")
-    
-    # Check if Twilio is configured
-    if os.getenv("TWILIO_ACCOUNT_SID"):
-        print("📧 Twilio SMS configured")
-    else:
-        print("⚠️  Twilio not configured - SMS alerts will be mocked")
-    
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
+    port = int(os.getenv("PORT", "8000"))
+    # Use Eventlet for production-safe Socket.IO server
+    import eventlet
+    import eventlet.wsgi
+    socketio.run(app, host="0.0.0.0", port=port)
