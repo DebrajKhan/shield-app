@@ -110,10 +110,6 @@ def alert():
 def serve_index():
     return send_from_directory(app.static_folder, "sheild_frontend2.html")
 
-@app.route("/sheild_frontend2.html")
-def serve_shield_frontend2():
-    return send_from_directory(app.static_folder, "sheild_frontend2.html")
-
 @app.route("/<path:path>")
 def serve_static_file(path):
     file_path = os.path.join(app.static_folder, path)
