@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Police Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Police Dashboard</h1>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Type a message"/>
+    <button id="sendBtn">Send</button>
+
+    <script>
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('user_message', data => {
+            const chat = document.getElementById('chat');
+            const msg = document.createElement('div');
+            msg.textContent = `${data.user_id}: ${data.message}`;
+            chat.appendChild(msg);
+        });
+
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            socket.emit('police_message', { message });
+            document.getElementById('messageInput').value = '';
+        });
+    </script>
+</body>
+</html>
