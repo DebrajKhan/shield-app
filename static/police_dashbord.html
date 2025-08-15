@@ -1,43 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Police Dashboard</title>
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-<style>
-#policeChatBox { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-#policeInput { width: 70%; padding: 8px; }
-#sendBtn { width: 28%; padding: 8px; }
-</style>
+    <meta charset="UTF-8">
+    <title>Police Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-<h2>Police Dashboard</h2>
-<div id="policeChatBox"></div>
-<input type="text" id="policeInput" placeholder="Type reply..." />
-<button id="sendBtn" onclick="sendMessageToUser()">Send</button>
+    <h1>Police Dashboard</h1>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Type a message"/>
+    <button id="sendBtn">Send</button>
 
-<script>
-const socket = io(); // Connect to backend
+    <script>
+        const socket = io();
 
-// Receive messages from users
-socket.on('user_message', function(data){
-    const chatBox = document.getElementById('policeChatBox');
-    chatBox.innerHTML += `<p><b>${data.user_id}:</b> ${data.message}</p>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
-});
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
 
-// Send reply to user
-function sendMessageToUser() {
-    const input = document.getElementById('policeInput');
-    const msg = input.value.trim();
-    if(!msg) return;
-    socket.emit('police_message', { user_id: 'Police', message: msg });
-    const chatBox = document.getElementById('policeChatBox');
-    chatBox.innerHTML += `<p><b>You:</b> ${msg}</p>`;
-    input.value = "";
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-</script>
+        socket.on('user_message', data => {
+            const chat = document.getElementById('chat');
+            const msg = document.createElement('div');
+            msg.textContent = `${data.user_id}: ${data.message}`;
+            chat.appendChild(msg);
+        });
+
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            socket.emit('police_message', { message });
+            document.getElementById('messageInput').value = '';
+        });
+    </script>
 </body>
 </html>
