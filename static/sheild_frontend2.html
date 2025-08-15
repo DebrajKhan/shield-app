@@ -10,7 +10,7 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <!-- TweetNaCl for encryption -->
 <script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tweetnacl-util/nacl-util.min.js"></script
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl-util/nacl-util.min.js"></script>
     <style>
         /* --- Root Variables & Base Styles --- */
         :root {
@@ -1143,6 +1143,7 @@ Send
 <div id="userChatBox"></div>
 <input type="text" id="userInput" placeholder="Type your message..." />
 <button id="sendBtn" onclick="sendUserMessage()">Send</button>
+
     
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -1197,7 +1198,7 @@ Send
       msgElem.textContent = '${sender}: ${message}';
       chatBox.appendChild(msgElem);
       chatBox.scrollTop = chatBox.scrollHeight;
-  }
+}
 
         
         fetch("http://127.0.0.1:5000/vault/dev/create_user", {
