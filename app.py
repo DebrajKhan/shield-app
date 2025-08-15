@@ -5,6 +5,7 @@ import os
 from danger_engine import DangerEngine, NearbySafeZones, VersionInfo
 from twilio.rest import Client  
 from flask_socketio import SocketIO, emit
+import gunicorn
 
 API_KEY = os.getenv("DPE_API_KEY", "dev-key") 
 
@@ -130,7 +131,7 @@ def police_dashboard():
 
 
 # ------------------- Run App -------------------
-if __name__ == "_main_":
+if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     # Use eventlet for real-time
-    socketio.run(app, host="0.0.0.0", port=port)
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
