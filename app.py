@@ -1,11 +1,11 @@
-# app.py - Combined frontend + backend for SHEild Danger Prediction Engine
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from datetime import datetime, timezone
 import os
 from danger_engine import DangerEngine, NearbySafeZones, VersionInfo
+from twilio.rest import Client  
 
-API_KEY = os.getenv("DPE_API_KEY", "dev-key")  # change in Render env vars for production
+API_KEY = os.getenv("DPE_API_KEY", "dev-key") 
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -45,26 +45,57 @@ def predict():
     result = engine.score(data)
     return jsonify(result)
 
+
 @app.post("/api/alert")
 def alert():
-    if not _auth_ok(request):
-        return jsonify({"error": "Unauthorized"}), 401
     payload = request.get_json(silent=True) or {}
-    return jsonify({
-        "status": "queued",
-        "echo": payload,
-        "note": "Replace with actual notifier for production."
-    }), 202
+    message_text = payload.get("message", "🚨 Emergency! SOS triggered. Please send help.")
+
+    try:
+        # Twilio client
+        client = Client(
+            os.getenv("TWILIO_ACCOUNT_SID"),
+            os.getenv("TWILIO_AUTH_TOKEN")
+        )
+
+        # Send SMS to verified number
+        to_number = payload.get("to") or os.getenv("TWILIO_TO_NUMBER")
+        from_number = os.getenv("TWILIO_FROM_NUMBER")
+
+        # Debug logs
+        print("Sending SMS from:", from_number)
+        print("Sending SMS to:", to_number)
+        print("Message:", message_text)
+
+        client.messages.create(
+            body=message_text,
+            from_=from_number,
+            to=to_number
+        )
+
+        return jsonify({
+            "status": "sent",
+            "note": "SMS alert sent successfully.",
+            "message": message_text
+        }), 200
+
+    except Exception as e:
+        print("Error sending SMS:", e)
+        return jsonify({"error": str(e)}), 500
 
 # Serve frontend
 @app.route("/")
 def serve_index():
     return send_from_directory(app.static_folder, "index.html")
 
-# Catch-all for static files (CSS, JS, images)
+# Catch-all for static files and frontend routes
 @app.route("/<path:path>")
 def serve_static_file(path):
-    return send_from_directory(app.static_folder, path)
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.isfile(file_path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, "index.html")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
