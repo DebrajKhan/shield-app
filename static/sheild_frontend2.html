@@ -1136,6 +1136,30 @@
     <button onclick="sendMessageToPolice()" style="width: 28%;">Send</button>
 </div>
 
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+const socket = io(); // Connects to backend
+
+function sendMessageToPolice() {
+    const msg = document.getElementById('chatInput').value;
+    if(!msg) return;
+    socket.emit('user_message', { message: msg, user_id: 'user123' });
+    document.getElementById('chatBox').innerHTML += `<p><b>You:</b> ${msg}</p>`;
+    document.getElementById('chatInput').value = "";
+    scrollChatToBottom();
+}
+
+socket.on('user_message', function(data){
+    document.getElementById('chatBox').innerHTML += `<p><b>Police:</b> ${data.message}</p>`;
+    scrollChatToBottom();
+});
+
+function scrollChatToBottom() {
+    const chatBox = document.getElementById('chatBox');
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+</script>
+
 
     <video id="panicCam" autoplay playsinline style="display:none;"></video>
     <div id="panicStatus" style="font-weight: bold; color: red; margin-top: 20px;"></div>

@@ -123,6 +123,12 @@ def handle_connect():
 def handle_disconnect():
     print("Client disconnected")
 
+    # Police dashboard route
+@app.route("/police")
+def police_dashboard():
+    return send_from_directory(app.static_folder, "police_dashboard.html")
+
+
 # ------------------- Run App -------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
