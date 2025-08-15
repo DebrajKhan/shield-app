@@ -6,6 +6,11 @@
     <title>SHEild - Empowering Women's Safety</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<!-- TweetNaCl for encryption -->
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl-util/nacl-util.min.js"></script
     <style>
         /* --- Root Variables & Base Styles --- */
         :root {
@@ -71,7 +76,9 @@
             font-weight: 700;
             text-align: center;
         }
-
+#userChatBox { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+#userInput { width: 70%; padding: 8px; }
+#sendBtn { width: 28%; padding: 8px; }
         /* --- Animations & Effects --- */
         .fade-in {
             opacity: 0;
@@ -1119,8 +1126,10 @@
             </div>
         </div>
         <div class="chat-input-container">
-            <input type="text" class="chat-input" id="userInput" placeholder="Type your message..." autocomplete="off">
-            <button class="send-btn" id="sendMessage">
+            <input type="text" id="chat-input" placeholder="Type a message..." />
+<button onclick="sendMessage('user', document.getElementById('chat-input').value); document.getElementById('chat-input').value='';">
+Send
+</button>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -1128,44 +1137,97 @@
             </button>
         </div>
     </div>
-
-    <div id="chatContainer" style="position: fixed; bottom: 20px; right: 20px; width: 300px; background: white; border: 1px solid #ccc; padding: 10px; z-index: 1000;">
-    <h4>Police Chat</h4>
-    <div id="chatBox" style="height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; margin-bottom: 5px;"></div>
-    <input type="text" id="chatInput" placeholder="Type your message..." style="width: 70%;" />
-    <button onclick="sendMessageToPolice()" style="width: 28%;">Send</button>
-</div>
-
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-<script>
-const socket = io(); // Connects to backend
-
-function sendMessageToPolice() {
-    const msg = document.getElementById('chatInput').value;
-    if(!msg) return;
-    socket.emit('user_message', { message: msg, user_id: 'user123' });
-    document.getElementById('chatBox').innerHTML += `<p><b>You:</b> ${msg}</p>`;
-    document.getElementById('chatInput').value = "";
-    scrollChatToBottom();
-}
-
-socket.on('user_message', function(data){
-    document.getElementById('chatBox').innerHTML += `<p><b>Police:</b> ${data.message}</p>`;
-    scrollChatToBottom();
-});
-
-function scrollChatToBottom() {
-    const chatBox = document.getElementById('chatBox');
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-</script>
-
-
     <video id="panicCam" autoplay playsinline style="display:none;"></video>
     <div id="panicStatus" style="font-weight: bold; color: red; margin-top: 20px;"></div>
+    <h2>User Chat</h2>
+<div id="userChatBox"></div>
+<input type="text" id="userInput" placeholder="Type your message..." />
+<button id="sendBtn" onclick="sendUserMessage()">Send</button>
+    
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+
     <script>
+          // ------------------ Encryption Setup ------------------
+  // 32-byte shared key (for demo purposes only)
+  
+  const key = nacl.util.decodeUTF8("12345678901234567890123456789012");
+
+  // Encrypt message
+  function encryptMessage(message) {
+      const nonce = nacl.randomBytes(24);
+      const encrypted = nacl.secretbox(nacl.util.decodeUTF8(message), nonce, key);
+      return {
+          nonce: nacl.util.encodeBase64(nonce),
+          message: nacl.util.encodeBase64(encrypted)
+      };
+  }
+
+  // Decrypt message
+  function decryptMessage(encryptedObj) {
+      const nonce = nacl.util.decodeBase64(encryptedObj.nonce);
+      const encrypted = nacl.util.decodeBase64(encryptedObj.message);
+      const decrypted = nacl.secretbox.open(encrypted, nonce, key);
+      return decrypted ? nacl.util.encodeUTF8(decrypted) : null;
+  }
+    // Sending a message
+  function sendMessage(sender, msg) {
+      const encrypted = encryptMessage(msg);
+      encrypted.sender = sender; // add sender info
+      socket.emit(sender === 'user' ? 'user_message' : 'police_message', encrypted);
+      appendMessageToUI(sender, msg); // optional: show sent message immediately
+  }
+  
+
+  // Receiving messages
+  socket.on('user_message', (data) => {
+      const decrypted = decryptMessage(data);
+      if (decrypted) {
+          appendMessageToUI(data.sender, decrypted);
+      } else {
+          console.log("Failed to decrypt message");
+      }
+  });
+    function appendMessageToUI(sender, message) {
+      const chatBox = document.getElementById('chat-box');
+      if (!chatBox) return;
+      const msgElem = document.createElement('div');
+      msgElem.className = sender === 'user' ? 'msg user' : 'msg police';
+      msgElem.textContent = '${sender}: ${message}';
+      chatBox.appendChild(msgElem);
+      chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+        
+        fetch("http://127.0.0.1:5000/vault/dev/create_user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Rahul", role: "admin" })
+})
+.then(res => res.json())
+.then(data => console.log(data));
+        const socket = io(); // Connecting to backend mf
+
+// Receive messages 
+socket.on('user_message', function(data){
+    const chatBox = document.getElementById('userChatBox');
+    chatBox.innerHTML += <p><b>${data.user_id || 'Police'}:</b> ${data.message}</p>;
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+// Send message 
+function sendUserMessage() {
+    const input = document.getElementById('userInput');
+    const msg = input.value.trim();
+    if(!msg) return;
+    socket.emit('user_message', { user_id: 'User', message: msg });
+    const chatBox = document.getElementById('userChatBox');
+    chatBox.innerHTML += <p><b>You:</b> ${msg}</p>;
+    input.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+        
         document.getElementById('sosbtn').addEventListener('click', async () => {
     try {
         const response = await fetch('https://shield-app.onrender.com/api/alert', {
@@ -1343,7 +1405,7 @@ function captureAndSendFrame() {
                 zoomControl: false,
                 scrollWheelZoom: false,
                 dragging: false
-            }).setView([22.5726,  88.3639 ], 13);
+            }).setView([37.775, -122.4183], 13);
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '',

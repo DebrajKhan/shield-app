@@ -5,7 +5,7 @@ import os
 from danger_engine import DangerEngine, NearbySafeZones, VersionInfo
 from twilio.rest import Client  
 from flask_socketio import SocketIO, emit
-
+from encryption_utils import encrypt_data, decrypt_data
 
 API_KEY = os.getenv("DPE_API_KEY", "dev-key") 
 
@@ -43,7 +43,6 @@ def safe_zones():
 
 @app.get("/api/city-coords")
 def city_coords():
-    # Kolkata coordinates
     return jsonify({"lat": 22.5726, "lng": 88.3639})
 
 def _auth_ok(req):
@@ -53,14 +52,34 @@ def _auth_ok(req):
 def predict():
     if not _auth_ok(request):
         return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json(silent=True) or {}
-    result = engine.score(data)
-    return jsonify(result)
+
+    # Encrypt incoming data (Zero-Knowledge)
+    encrypted_data = encrypt_data(str(data))
+    
+    # Optional: store encrypted_data in DB
+    # Example: save_to_db(user_id, encrypted_data)
+
+    # Decrypt for processing
+    decrypted_data = decrypt_data(encrypted_data)
+
+    result = engine.score(eval(decrypted_data))  # Convert back to dict safely if needed
+    # Encrypt result before returning
+    encrypted_result = encrypt_data(str(result))
+
+    # Send decrypted result for frontend use
+    return jsonify(eval(decrypt_data(encrypted_result)))
 
 @app.post("/api/alert")
 def alert():
     payload = request.get_json(silent=True) or {}
     message_text = payload.get("message", "🚨 Emergency! SOS triggered. Please send help.")
+
+    # Encrypt message for zero-knowledge storage/logging if needed
+    encrypted_message = encrypt_data(message_text)
+    # Optional: store encrypted_message in DB
+
     try:
         client = Client(
             os.getenv("TWILIO_ACCOUNT_SID"),
@@ -99,23 +118,34 @@ def serve_static_file(path):
     else:
         return send_from_directory(app.static_folder, "index.html")
 
-# ------------------- Socket.IO Events -------------------
+# ------------------- Socket.IO Events (Encrypted) -------------------
 
-# User sends message to police dashboard
 @socketio.on('user_message')
 def handle_user_message(data):
-    print("Message from user:", data)
-    # Forward message to all connected clients (police dashboard)
-    emit('user_message', data, broadcast=True)
+    try:
+        # Encrypt message before broadcasting
+        message_text = data.get("message", "")
+        encrypted_message = encrypt_data(message_text)
 
-# Police (you) sends message to user
+        # Broadcast the encrypted message
+        emit('user_message', {"message": encrypted_message, "sender": "user"}, broadcast=True)
+        print("Encrypted message from user broadcasted")
+    except Exception as e:
+        print("Error encrypting user message:", str(e))
+
 @socketio.on('police_message')
 def handle_police_message(data):
-    print("Reply from police:", data)
-    # Forward message to all connected users
-    emit('user_message', data, broadcast=True)
+    try:
+        # Encrypt police reply before broadcasting
+        message_text = data.get("message", "")
+        encrypted_message = encrypt_data(message_text)
 
-# Optional: connection logs
+        # Broadcast the encrypted message
+        emit('user_message', {"message": encrypted_message, "sender": "police"}, broadcast=True)
+        print("Encrypted message from police broadcasted")
+    except Exception as e:
+        print("Error encrypting police message:", str(e))
+
 @socketio.on('connect')
 def handle_connect():
     print("Client connected")
@@ -124,14 +154,11 @@ def handle_connect():
 def handle_disconnect():
     print("Client disconnected")
 
-    # Police dashboard route
 @app.route("/police")
 def police_dashboard():
     return send_from_directory(app.static_folder, "police_dashboard.html")
 
-
 # ------------------- Run App -------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
-    # Run Flask-SocketIO app in development mode on all interfaces
     socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
