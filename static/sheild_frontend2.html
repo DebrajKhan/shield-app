@@ -1128,6 +1128,15 @@
             </button>
         </div>
     </div>
+
+    <div id="chatContainer" style="position: fixed; bottom: 20px; right: 20px; width: 300px; background: white; border: 1px solid #ccc; padding: 10px; z-index: 1000;">
+    <h4>Police Chat</h4>
+    <div id="chatBox" style="height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; margin-bottom: 5px;"></div>
+    <input type="text" id="chatInput" placeholder="Type your message..." style="width: 70%;" />
+    <button onclick="sendMessageToPolice()" style="width: 28%;">Send</button>
+</div>
+
+
     <video id="panicCam" autoplay playsinline style="display:none;"></video>
     <div id="panicStatus" style="font-weight: bold; color: red; margin-top: 20px;"></div>
 

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Police Dashboard</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #policeChatBox {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        #policeInput {
+            width: 70%;
+            padding: 8px;
+        }
+        #sendBtn {
+            width: 28%;
+            padding: 8px;
+        }
+        p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>Police Dashboard</h2>
+    <div id="policeChatBox"></div>
+    <input type="text" id="policeInput" placeholder="Type your reply..." />
+    <button id="sendBtn" onclick="sendMessageToUser()">Send</button>
+
+    <script>
+        const socket = io(); // Connect to your backend
+
+        // Listen for messages from users
+        socket.on('user_message', function(data){
+            const chatBox = document.getElementById('policeChatBox');
+            chatBox.innerHTML += `<p><b>${data.user_id}:</b> ${data.message}</p>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Send reply to user
+        function sendMessageToUser() {
+            const input = document.getElementById('policeInput');
+            const msg = input.value.trim();
+            if(!msg) return;
+            socket.emit('police_message', { message: msg });
+            const chatBox = document.getElementById('policeChatBox');
+            chatBox.innerHTML += `<p><b>You:</b> ${msg}</p>`;
+            input.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>

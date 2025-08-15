@@ -4,11 +4,14 @@ from datetime import datetime, timezone
 import os
 from danger_engine import DangerEngine, NearbySafeZones, VersionInfo
 from twilio.rest import Client  
+from flask_socketio import SocketIO, emit
 
 API_KEY = os.getenv("DPE_API_KEY", "dev-key") 
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 engine = DangerEngine()
 zones = NearbySafeZones()
@@ -36,6 +39,11 @@ def safe_zones():
 
 def _auth_ok(req):
     return req.headers.get("x-api-key", "") == API_KEY
+
+@app.get("/api/city-coords")
+def city_coords():
+    # Using Kolkata coordinates
+    return jsonify({"lat": 22.5726, "lng": 88.3639})
 
 @app.post("/api/predict")
 def predict():
@@ -96,7 +104,24 @@ def serve_static_file(path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, "index.html")
+    
+
+    # User sends message to police
+@socketio.on('user_message')
+def handle_user_message(data):
+    print("Message from user:", data)
+    # Forward message to police dashboard (you)
+    emit('user_message', data, broadcast=True)
+
+# Police (you) sends message to user
+@socketio.on('police_message')
+def handle_police_message(data):
+    print("Reply from police:", data)
+    # Forward message to user(s)
+    emit('user_message', data, broadcast=True)
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
-    app.run(host="0.0.0.0", port=port)
+    # Use eventlet for real-time connections
+    socketio.run(app, host="0.0.0.0", port=port)
